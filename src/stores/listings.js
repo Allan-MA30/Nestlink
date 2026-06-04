@@ -6,9 +6,18 @@
  * - Buy teammate:  filter by mode === 'sell'
  * - Rent teammate: filter by mode === 'rent'
  * - Sell/Dashboard: full access (add, edit, remove)
+ *
+ * Currency: Rwandan Franc (RWF)
+ * Use the exported formatRWF() helper everywhere you display a price.
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+
+/** Format a number as Rwandan Francs, e.g. formatRWF(180000) → "RWF 180,000" */
+export function formatRWF(amount, { suffix = '' } = {}) {
+  if (amount == null) return '—'
+  return 'RWF ' + Number(amount).toLocaleString() + (suffix ? suffix : '')
+}
 
 export const useListingsStore = defineStore('listings', () => {
   // STATE

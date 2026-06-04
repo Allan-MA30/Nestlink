@@ -2,12 +2,35 @@
   <div>
     <!-- Main Navbar -->
     <nav class="navbar">
-      <RouterLink to="/" class="logo">Nest<span>Link</span></RouterLink>
+      <RouterLink to="/" class="logo">
+        <!-- EstateHub Mansion Logo -->
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo-icon">
+          <!-- Dark background circle -->
+          <rect width="32" height="32" rx="8" fill="#0a1628"/>
+          <!-- Main mansion body -->
+          <rect x="6" y="17" width="20" height="11" fill="#c9a84c"/>
+          <!-- Mansion roof (triangle) -->
+          <polygon points="4,17 16,7 28,17" fill="#e8c96a"/>
+          <!-- Chimney left -->
+          <rect x="9" y="10" width="3" height="5" fill="#e8c96a"/>
+          <!-- Chimney right -->
+          <rect x="20" y="10" width="3" height="5" fill="#e8c96a"/>
+          <!-- Door -->
+          <rect x="13" y="22" width="6" height="6" rx="3" fill="#0a1628"/>
+          <!-- Windows left -->
+          <rect x="8" y="20" width="3" height="3" rx="0.5" fill="#0a1628"/>
+          <!-- Windows right -->
+          <rect x="21" y="20" width="3" height="3" rx="0.5" fill="#0a1628"/>
+          <!-- Roof ridge line -->
+          <line x1="4" y1="17" x2="28" y2="17" stroke="#0a1628" stroke-width="1"/>
+        </svg>
+        <span class="logo-text">Estate<span class="logo-accent">Hub</span></span>
+      </RouterLink>
 
       <div class="nav-links">
-        <RouterLink to="/"         class="nav-link" active-class="active">Home</RouterLink>
+        <RouterLink to="/"              class="nav-link" active-class="active">Home</RouterLink>
         <RouterLink to="/property/sell" class="nav-link" active-class="active">Property</RouterLink>
-        <RouterLink to="/contacts" class="nav-link" active-class="active">Contacts</RouterLink>
+        <RouterLink to="/contacts"      class="nav-link" active-class="active">Contacts</RouterLink>
         <!-- Dashboard only shows for sellers -->
         <RouterLink v-if="auth.isSeller" to="/dashboard" class="nav-link" active-class="active">
           Dashboard
@@ -43,13 +66,11 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const auth  = useRoute ? useAuthStore() : { isLoggedIn: false, isSeller: false }
-const route = useRoute()
+const auth   = useAuthStore()
+const route  = useRoute()
 const router = useRouter()
 
-const isPropertyRoute = computed(() =>
-  route.path.startsWith('/property')
-)
+const isPropertyRoute = computed(() => route.path.startsWith('/property'))
 
 const initials = computed(() => {
   const name = auth.user?.name || ''
@@ -76,11 +97,26 @@ function logout() {
   z-index: 50;
 }
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.logo-icon {
+  flex-shrink: 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(201,168,76,0.25);
+}
+.logo-text {
   font-size: 20px;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--text-main);
+  letter-spacing: -0.3px;
 }
-.logo span { color: var(--text-main); font-weight: 400; }
+.logo-accent {
+  color: var(--gold);
+  font-weight: 800;
+}
 .nav-links { display: flex; gap: 4px; }
 .nav-link {
   padding: 7px 16px;
@@ -88,6 +124,7 @@ function logout() {
   font-size: 14px;
   color: var(--text-muted);
   transition: all .2s;
+  text-decoration: none;
 }
 .nav-link:hover, .nav-link.active { color: var(--text-main); background: var(--card); }
 .nav-link.active { color: var(--gold); }
@@ -145,6 +182,7 @@ function logout() {
   font-weight: 500;
   border: 1px solid transparent;
   transition: all .2s;
+  text-decoration: none;
 }
 .sub-btn.buy         { color: #6fbaff; border-color: rgba(111,186,255,0.2); }
 .sub-btn.buy.active  { background: rgba(111,186,255,0.15); border-color: rgba(111,186,255,0.45); }

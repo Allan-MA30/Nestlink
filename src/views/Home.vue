@@ -48,10 +48,10 @@
           <div class="search-divider"></div>
           <select v-model="search.price" class="search-select">
             <option value="">Any Price</option>
-            <option value="0-1000">Under $1k</option>
-            <option value="1000-50000">$1k - $50k</option>
-            <option value="50000-100000">$50k - $100k</option>
-            <option value="100000-999999999">$100k+</option>
+            <option value="0-100000">Under RWF 100k</option>
+            <option value="100000-500000">RWF 100k - 500k</option>
+            <option value="500000-1000000">RWF 500k - 1M</option>
+            <option value="1000000-999999999">RWF 1M+</option>
           </select>
           <RouterLink :to="searchTarget" class="btn-search">Search</RouterLink>
         </div>
@@ -283,8 +283,9 @@ function categoryIcon(cat) {
 }
 
 function formatPrice(p) {
-  if (p.mode === 'rent') return p.category === 'car' ? '$' + p.price + '/day' : '$' + p.price + '/mo'
-  return '$' + p.price.toLocaleString()
+  const amount = `RWF ${p.price.toLocaleString()}`
+  if (p.mode === 'rent') return p.category === 'car' ? `${amount}/day` : `${amount}/mo`
+  return amount
 }
 
 function listingTarget(p) {

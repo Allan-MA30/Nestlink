@@ -19,19 +19,33 @@
 
           <div class="form-row">
             <label for="password">Password</label>
-            <input id="password" v-model="password" type="password" placeholder="Choose a password" />
+            <input id="password" v-model="password" type="password" minlength="7" placeholder="Choose a password" />
           </div>
 
+          <!-- Profile picture — only shown for seller/admin, stays compact -->
           <div v-if="role !== 'viewer'" class="form-row">
             <label>Profile picture (optional)</label>
-            <div class="profile-upload">
-              <div v-if="profilePreview" class="profile-preview">
-                <img :src="profilePreview" class="preview-img-large" />
-                <input id="profile" type="file" accept="image/*" @change="handleFile" class="file-input-overlay" title="Click to change" />
+            <div class="profile-upload-row">
+              <!-- Avatar preview (small, fixed size) -->
+              <div class="avatar-preview">
+                <img v-if="profilePreview" :src="profilePreview" class="avatar-img" alt="Profile preview" />
+                <div v-else class="avatar-placeholder">
+                  {{ name ? name.charAt(0).toUpperCase() : '?' }}
+                </div>
               </div>
-              <div v-else class="profile-placeholder">
-                <div class="placeholder-text">{{ name ? name.charAt(0).toUpperCase() : '?' }}</div>
-                <input id="profile" type="file" accept="image/*" @change="handleFile" class="file-input-overlay" />
+              <!-- File input beside the avatar -->
+              <div class="upload-right">
+                <label for="profile" class="btn-choose-file">
+                  {{ profilePreview ? 'Change photo' : 'Choose photo' }}
+                </label>
+                <input
+                  id="profile"
+                  type="file"
+                  accept="image/*"
+                  class="hidden-file-input"
+                  @change="handleFile"
+                />
+                <p class="upload-hint">JPG, PNG or GIF · max 5 MB</p>
               </div>
             </div>
           </div>
@@ -41,7 +55,7 @@
             <div class="role-controls">
               <label><input type="radio" value="viewer" v-model="role" /> Viewer</label>
               <label><input type="radio" value="seller" v-model="role" /> Seller</label>
-              <label><input type="radio" value="admin" v-model="role" /> Admin</label>
+              <label><input type="radio" value="admin"  v-model="role" /> Admin</label>
             </div>
           </div>
 
@@ -53,31 +67,19 @@
           <div v-if="role === 'seller'" class="terms-row">
             <div class="terms-title">Terms and conditions</div>
             <div class="terms-items">
-
-              <!-- All three terms are display-only (disabled checked) -->
               <label class="terms-check">
                 <input type="checkbox" disabled checked />
-                <span>
-                  1) On the bought product, <strong>5% will be gained</strong> by the website company.
-                </span>
+                <span>1) On the bought product, <strong>5% will be gained</strong> by the website company.</span>
               </label>
-
               <label class="terms-check">
                 <input type="checkbox" disabled checked />
-                <span>
-                  2) If you are found to lie that you have a property, <strong>you will be punished by law</strong>.
-                </span>
+                <span>2) If you are found to lie about a property, <strong>you will be punished by law</strong>.</span>
               </label>
-
               <label class="terms-check">
                 <input type="checkbox" disabled checked />
-                <span>
-                  3) You have to answer customers in <strong>not more than 1 day</strong>. Failure adds <strong>extra fines</strong>.
-                </span>
+                <span>3) You must answer customers in <strong>not more than 1 day</strong>. Failure adds <strong>extra fines</strong>.</span>
               </label>
             </div>
-
-            <!-- Only this one checkbox controls termsAccepted -->
             <div class="terms-confirm">
               <label class="terms-check">
                 <input type="checkbox" v-model="termsAccepted" />
@@ -101,31 +103,30 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore }  from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 
 const router = useRouter()
-const route = useRoute()
-const auth = useAuthStore()
-const users = useUsersStore()
+const route  = useRoute()
+const auth   = useAuthStore()
+const users  = useUsersStore()
 
-const name = ref('')
-const email = ref('')
-const password = ref('')
-const role = ref('viewer')
-const adminKey = ref('')
-const error = ref('')
-const termsAccepted = ref(false)
+const name           = ref('')
+const email          = ref('')
+const password       = ref('')
+const role           = ref('viewer')
+const adminKey       = ref('')
+const error          = ref('')
+const termsAccepted  = ref(false)
 const profilePreview = ref('')
 const profilePicture = ref('')
 
-// Where to go after successful registration
-// Sellers and admins always go to their dashboard regardless of query params
+// Where to redirect after registration
 const redirectTarget = computed(() => {
   if (role.value === 'seller') return '/dashboard'
   if (role.value === 'admin')  return '/admin'
-  if (route.query.redirect) return route.query.redirect
-  if (route.query.next)     return route.query.next
+  if (route.query.redirect)    return route.query.redirect
+  if (route.query.next)        return route.query.next
   return '/property/buy'
 })
 
@@ -138,16 +139,16 @@ const loginTarget = computed(() => ({
   },
 }))
 
-// Preselect role from query (e.g. /register?role=seller)
+// Preselect role from query
 if (route.query.role === 'seller') role.value = 'seller'
 if (route.query.role === 'admin')  role.value = 'admin'
 
-// Clear profile picture and terms when switching to viewer
+// Clear profile & terms when switching to viewer
 watch(role, (newRole) => {
   if (newRole === 'viewer') {
     profilePreview.value = ''
     profilePicture.value = ''
-    termsAccepted.value = false
+    termsAccepted.value  = false
   }
 })
 
@@ -158,19 +159,18 @@ function onSubmit() {
     error.value = 'Please complete all fields.'
     return
   }
-
+  if (password.value.length < 7) {
+    error.value = 'Password must be at least 7 characters.'
+    return
+  }
   if (users.findByEmail(email.value)) {
     error.value = 'Email already registered.'
     return
   }
-
-  if (role.value === 'admin') {
-    if (!adminKey.value || adminKey.value !== 'ADMIN2025') {
-      error.value = 'Invalid admin key.'
-      return
-    }
+  if (role.value === 'admin' && adminKey.value !== 'ADMIN2025') {
+    error.value = 'Invalid admin key.'
+    return
   }
-
   if (role.value === 'seller' && !termsAccepted.value) {
     error.value = 'You must accept the Terms and conditions to continue.'
     return
@@ -188,14 +188,14 @@ function onSubmit() {
 
   users.addUser(userData)
   auth.register({
-    id: userData.id,
-    name: userData.name,
+    id:    userData.id,
+    name:  userData.name,
     email: userData.email,
-    role: userData.role,
+    role:  userData.role,
+    profilePicture: userData.profilePicture,
     ...(userData.role === 'seller' ? { termsAccepted: true } : {}),
   })
 
-  // Redirect respects ?redirect= / ?next= then falls back to role default
   router.push(redirectTarget.value)
 }
 
@@ -212,34 +212,106 @@ function handleFile(e) {
 </script>
 
 <style scoped>
-.auth-wrap { display: flex; justify-content: center; padding: 3rem 0; }
-.auth-card { width: 460px; position: relative; }
-.close-auth { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1; }
+.auth-wrap  { display: flex; justify-content: center; padding: 3rem 0; }
+.auth-card  { width: 460px; position: relative; }
+.close-auth {
+  position: absolute; top: 12px; right: 12px;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1;
+}
 .close-auth:hover { color: var(--text-main); border-color: var(--gold); }
 .auth-card h2 { margin-bottom: 0.25rem; }
-.muted { color: var(--text-muted); margin-bottom: 1rem; }
-.form { display: grid; gap: 12px; margin-top: 8px; }
+.muted        { color: var(--text-muted); margin-bottom: 1rem; }
+.form         { display: grid; gap: 12px; margin-top: 8px; }
 .form-row label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-.terms-row { padding: 10px 12px; background: rgba(201,168,76,0.06); border: 1px solid var(--border); border-radius: 10px; }
-.terms-title { font-weight: 800; color: var(--gold); margin-bottom: 8px; }
-.terms-items { display: flex; flex-direction: column; gap: 8px; }
-.terms-check { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text-main); }
-.terms-check input { margin-top: 3px; }
-.terms-confirm { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-.form-row input[type="text"], .form-row input[type="email"], .form-row input[type="password"] {
-  width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-  background: transparent; color: var(--text-main);
+
+/* ── Profile upload row ─────────────────────────────────── */
+.profile-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: rgba(201,168,76,0.05);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
 }
-.role-row .role-controls { display:flex; gap:12px; align-items:center; }
-.role-controls label { font-size: 13px; color: var(--text-muted); padding: 6px 8px; border-radius: 6px; }
+
+/* Fixed-size avatar — never grows */
+.avatar-preview {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--gold);
+}
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;     /* fills the circle, crops excess */
+  display: block;
+}
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #c9a84c, #9d8b3f);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.upload-right  { display: flex; flex-direction: column; gap: 4px; }
+.btn-choose-file {
+  display: inline-block;
+  background: rgba(201,168,76,0.15);
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,0.35);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-choose-file:hover { background: rgba(201,168,76,0.28); }
+/* Hide the raw file input — the label acts as the button */
+.hidden-file-input { display: none; }
+.upload-hint { font-size: 11px; color: var(--text-muted); margin: 0; }
+
+/* ── Text inputs ─────────────────────────────────────────── */
+.form-row input[type="text"],
+.form-row input[type="email"],
+.form-row input[type="password"] {
+  width: 100%; padding: 10px 12px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-main);
+  font-family: var(--font); font-size: 13px; outline: none;
+}
+.form-row input:focus { border-color: var(--gold); }
+
+/* ── Role selector ───────────────────────────────────────── */
+.role-row .role-controls { display: flex; gap: 12px; align-items: center; }
+.role-controls label { font-size: 13px; color: var(--text-muted); padding: 6px 8px; border-radius: 6px; cursor: pointer; }
 .role-controls label:hover { background: rgba(0,0,0,0.03); }
-.actions { display:flex; gap:10px; margin-top: 8px; align-items:center }
-.error { color: #ff8b8b; font-size: 13px; padding: 6px 0; }
-.profile-section { display:flex; align-items:center; gap:12px; margin-top:8px }
-.placeholder-logo { width:48px; height:48px; border-radius:4px; background:linear-gradient(135deg, #c9a84c 0%, #9d8b3f 100%); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:18px; flex-shrink:0 }
-.preview-container { display:flex; align-items:center; gap:8px }
-.preview-logo { width:48px; height:48px; border-radius:4px; object-fit:cover; flex-shrink:0 }
-.btn-change { background:#c9a84c; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-size:12px; font-weight:600; cursor:pointer; transition:opacity .2s }
-.btn-change:hover { opacity:.85 }
-.file-input { flex:1 }
+
+/* ── Terms ───────────────────────────────────────────────── */
+.terms-row {
+  padding: 10px 12px;
+  background: rgba(201,168,76,0.06);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.terms-title  { font-weight: 800; color: var(--gold); margin-bottom: 8px; }
+.terms-items  { display: flex; flex-direction: column; gap: 8px; }
+.terms-check  { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text-main); cursor: pointer; }
+.terms-check input { margin-top: 3px; flex-shrink: 0; }
+.terms-confirm { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+/* ── Actions ─────────────────────────────────────────────── */
+.actions { display: flex; gap: 10px; margin-top: 8px; align-items: center; }
+.error   { color: #ff8b8b; font-size: 13px; padding: 6px 0; }
 </style>

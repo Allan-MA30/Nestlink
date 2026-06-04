@@ -4,7 +4,10 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="avatar-circle">{{ initials }}</div>
+        <div class="avatar-circle">
+          <img v-if="sellerProfilePicture" :src="sellerProfilePicture" alt="Seller profile" class="avatar-img" />
+          <span v-else>{{ initials }}</span>
+        </div>
         <h3 class="dashboard-title">{{ auth.user?.name }}</h3>
         <p class="dashboard-subtitle">Seller Dashboard</p>
       </div>
@@ -100,7 +103,6 @@
           </div>
         </div>
 
-        <!-- Recent enquiries preview -->
         <div class="recent-section" v-if="enquiriesStore.enquiries.length > 0">
           <h3>Recent Enquiries</h3>
           <div class="recent-list">
@@ -152,7 +154,7 @@
                 <span>{{ p.views }} views</span>
               </div>
               <div class="property-footer">
-                <p class="price">${{ p.price.toLocaleString() }}</p>
+                <p class="price">{{ formatRWF(p.price) }}</p>
                 <button class="btn-edit" @click="listingsStore.incrementViews(p.id)">View</button>
               </div>
             </div>
@@ -195,7 +197,7 @@
               <div class="property-footer">
                 <p class="price">{{ formatPrice(p) }}</p>
                 <div style="display:flex;gap:8px;">
-                  <button class="btn-edit" @click="editListing(p)">Edit</button>
+                  <button class="btn-edit"   @click="editListing(p)">Edit</button>
                   <button class="btn-remove" @click="listingsStore.removeListing(p.id)">Remove</button>
                 </div>
               </div>
@@ -214,7 +216,7 @@
       <!-- ==================== BOOKINGS TAB ==================== -->
       <section v-if="activeTab === 'bookings'" class="content-section">
         <div class="section-header">
-          <h2>Enquiries & Bookings</h2>
+          <h2>Enquiries &amp; Bookings</h2>
           <button class="btn-outline" @click="markAllRead">Mark all read</button>
         </div>
 
@@ -237,9 +239,7 @@
               <span class="enquiry-date">{{ enquiry.createdAt }}</span>
             </div>
             <p class="enquiry-email">📧 {{ enquiry.fromEmail }}</p>
-            <div class="enquiry-subject">
-              <strong>Re:</strong> {{ enquiry.propertyTitle }}
-            </div>
+            <div class="enquiry-subject"><strong>Re:</strong> {{ enquiry.propertyTitle }}</div>
             <p class="enquiry-message">{{ enquiry.message }}</p>
             <div class="enquiry-actions">
               <button class="btn-reply" @click="enquiriesStore.markRead(enquiry.id)">
@@ -254,12 +254,9 @@
 
       <!-- ==================== NOTIFICATIONS TAB ==================== -->
       <section v-if="activeTab === 'notifications'" class="content-section">
-        <div class="section-header">
-          <h2>Notifications</h2>
-        </div>
+        <div class="section-header"><h2>Notifications</h2></div>
 
         <div class="notifications-list">
-          <!-- Live enquiry notifications -->
           <div
             v-for="e in enquiriesStore.enquiries" :key="'notif-' + e.id"
             class="notification-item" :class="{ new: !e.read }"
@@ -272,8 +269,6 @@
             </div>
             <span v-if="!e.read" class="new-dot">New</span>
           </div>
-
-          <!-- Static notifications -->
           <div class="notification-item">
             <span class="notif-icon">👁️</span>
             <div class="notif-content">
@@ -293,15 +288,16 @@
 
       <!-- ==================== SETTINGS TAB ==================== -->
       <section v-if="activeTab === 'settings'" class="content-section">
-        <div class="section-header">
-          <h2>Settings</h2>
-        </div>
+        <div class="section-header"><h2>Settings</h2></div>
 
         <div class="settings-container">
           <div class="settings-section">
             <h3>Buyer Profile Preview</h3>
             <div class="profile-preview-card">
-              <div class="avatar-circle">{{ initials }}</div>
+              <div class="avatar-circle">
+                <img v-if="sellerProfilePicture" :src="sellerProfilePicture" alt="Seller profile" class="avatar-img" />
+                <span v-else>{{ initials }}</span>
+              </div>
               <div>
                 <strong>{{ settingsForm.name || auth.user?.name }}</strong>
                 <p>{{ settingsForm.bio || 'Add a short bio so buyers know who they are contacting.' }}</p>
@@ -336,18 +332,9 @@
           <div class="settings-section">
             <h3>Account Settings</h3>
             <div class="settings-form">
-              <div class="form-group">
-                <label>Current Password</label>
-                <input type="password" placeholder="••••••••" />
-              </div>
-              <div class="form-group">
-                <label>New Password</label>
-                <input type="password" placeholder="••••••••" />
-              </div>
-              <div class="form-group">
-                <label>Confirm Password</label>
-                <input type="password" placeholder="••••••••" />
-              </div>
+              <div class="form-group"><label>Current Password</label><input type="password" placeholder="••••••••" /></div>
+              <div class="form-group"><label>New Password</label><input type="password" placeholder="••••••••" /></div>
+              <div class="form-group"><label>Confirm Password</label><input type="password" placeholder="••••••••" /></div>
               <button class="btn-outline">Update Password</button>
             </div>
           </div>
@@ -408,7 +395,8 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label>Price (USD)</label>
+            <!-- ✅ label updated to RWF -->
+            <label>Price (RWF)</label>
             <input v-model="form.price" type="number" class="form-input" placeholder="e.g. 50000" />
           </div>
           <div class="form-group">
@@ -450,7 +438,7 @@
         <div class="form-group">
           <label>Image URL</label>
           <input v-model="form.image" class="form-input" placeholder="https://images.unsplash.com/..." />
-          <input type="file" accept="image/*" class="form-input" @change="handleImageFile" />
+          <input type="file" accept="image/*" class="form-input" style="margin-top:6px;" @change="handleImageFile" />
         </div>
 
         <div class="form-group">
@@ -472,9 +460,10 @@
 
 <script setup>
 import { ref, computed, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter }         from 'vue-router'
 import { useAuthStore }      from '@/stores/auth'
 import { useListingsStore }  from '@/stores/listings'
+import { formatRWF }         from '@/stores/listings'
 import { useEnquiriesStore } from '@/stores/enquiries'
 import { useUsersStore }     from '@/stores/users'
 
@@ -484,11 +473,10 @@ const listingsStore  = useListingsStore()
 const enquiriesStore = useEnquiriesStore()
 const usersStore     = useUsersStore()
 
-const activeTab  = ref('home')
-const showModal  = ref(false)
-const editingId  = ref(null)
+const activeTab = ref('home')
+const showModal = ref(false)
+const editingId = ref(null)
 
-// Settings form
 const settingsForm = ref({
   name:  auth.user?.name  || '',
   email: auth.user?.email || '',
@@ -496,14 +484,12 @@ const settingsForm = ref({
   bio:   '',
 })
 
-// Notification preferences
 const notifPrefs = reactive([
-  { label: 'Email Notifications', desc: 'Receive emails for new enquiries',        enabled: true },
-  { label: 'SMS Alerts',           desc: 'Receive SMS for urgent messages',         enabled: true },
-  { label: 'Weekly Reports',       desc: 'Receive weekly performance reports',      enabled: true },
+  { label: 'Email Notifications', desc: 'Receive emails for new enquiries',    enabled: true },
+  { label: 'SMS Alerts',           desc: 'Receive SMS for urgent messages',     enabled: true },
+  { label: 'Weekly Reports',       desc: 'Receive weekly performance reports',  enabled: true },
 ])
 
-// Sidebar menu — badge reacts to unread count
 const unread = computed(() => enquiriesStore.enquiries.filter(e => !e.read).length)
 
 const menuItems = computed(() => [
@@ -515,14 +501,14 @@ const menuItems = computed(() => [
   { id: 'settings',      label: 'Settings',      icon: '⚙️', badge: 0 },
 ])
 
-// Initials avatar
 const initials = computed(() => {
   const name = auth.user?.name || ''
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 })
 
-// Listing data
 const sellerId       = computed(() => auth.user?.id || 1)
+const currentSeller  = computed(() => usersStore.findById(sellerId.value))
+const sellerProfilePicture = computed(() => currentSeller.value?.profilePicture || auth.user?.profilePicture || '')
 const forSale        = computed(() => listingsStore.properties.filter(p => p.mode === 'sell'))
 const sellerListings = computed(() =>
   listingsStore.properties.filter(p => p.sellerId === sellerId.value || (p.category === 'car' && p.sellerId === 1))
@@ -534,32 +520,25 @@ const mostViewed     = computed(() => [...sellerListings.value].sort((a,b) => b.
 const topCategory    = computed(() => {
   if (!sellerListings.value.length) return 'No listings yet'
   const counts = sellerListings.value.reduce((acc, p) => {
-    acc[p.category] = (acc[p.category] || 0) + 1
-    return acc
+    acc[p.category] = (acc[p.category] || 0) + 1; return acc
   }, {})
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]
 })
 
 const locations = [
-  'Kacyiru, Kigali',
-  'Nyarutarama, Kigali',
-  'Kimihurura, Kigali',
-  'Remera, Kigali',
-  'Gisozi, Kigali',
-  'Kicukiro, Kigali',
-  'Rebero, Kigali',
-  'Bugesera, Eastern Province',
-  'Kigali',
+  'Kacyiru, Kigali','Nyarutarama, Kigali','Kimihurura, Kigali',
+  'Remera, Kigali','Gisozi, Kigali','Kicukiro, Kigali',
+  'Rebero, Kigali','Bugesera, Eastern Province','Kigali',
 ]
 
+// ✅ Price ranges updated to RWF labels
 const priceRanges = [
-  { value: '0-1000', label: 'Under $1k' },
-  { value: '1000-50000', label: '$1k - $50k' },
-  { value: '50000-100000', label: '$50k - $100k' },
-  { value: '100000-999999999', label: '$100k+' },
+  { value: '0-1000',           label: 'Under RWF 1,000'          },
+  { value: '1000-50000',       label: 'RWF 1,000 – 50,000'       },
+  { value: '50000-100000',     label: 'RWF 50,000 – 100,000'     },
+  { value: '100000-999999999', label: 'RWF 100,000+'             },
 ]
 
-// Categories + types
 const categories = [
   { value: 'house', label: 'House', icon: '🏠' },
   { value: 'land',  label: 'Land',  icon: '🌍' },
@@ -567,9 +546,9 @@ const categories = [
 ]
 
 const typesByCategory = {
-  house: ['House', 'Apartment', 'Villa', 'Studio', 'Townhouse'],
-  land:  ['Residential Land', 'Commercial Land', 'Agricultural Land'],
-  car:   ['SUV', 'Sedan', 'Van', 'Pickup', 'Bus', 'Minibus'],
+  house: ['House','Apartment','Villa','Studio','Townhouse'],
+  land:  ['Residential Land','Commercial Land','Agricultural Land'],
+  car:   ['SUV','Sedan','Van','Pickup','Bus','Minibus'],
 }
 
 const blankForm = () => ({
@@ -589,13 +568,17 @@ function categoryIcon(cat) {
   return { house: '🏠', land: '🌍', car: '🚗' }[cat] || '📦'
 }
 
+/** Format price for the Sells tab card footer */
 function formatPrice(p) {
-  if (p.mode === 'rent') return p.category === 'car' ? '$' + p.price + '/day' : '$' + p.price + '/mo'
-  return '$' + p.price.toLocaleString()
+  if (p.mode === 'rent') {
+    const suffix = p.category === 'car' ? '/day' : '/mo'
+    return formatRWF(p.price, { suffix })
+  }
+  return formatRWF(p.price)
 }
 
-function getSellerName(sellerId) {
-  const seller = usersStore.findById(sellerId)
+function getSellerName(sid) {
+  const seller = usersStore.findById(sid)
   return seller ? seller.name : 'Seller'
 }
 
@@ -607,9 +590,7 @@ function handleImageFile(e) {
   const file = e.target.files && e.target.files[0]
   if (!file) return
   const reader = new FileReader()
-  reader.onload = () => {
-    form.image = reader.result
-  }
+  reader.onload = () => { form.image = reader.result }
   reader.readAsDataURL(file)
 }
 
@@ -635,7 +616,7 @@ function submitForm() {
   const payload = {
     ...form,
     price:     Number(form.price),
-    bedrooms:  form.category === 'house' ? Number(form.bedrooms) : null,
+    bedrooms:  form.category === 'house' ? Number(form.bedrooms)  : null,
     bathrooms: form.category === 'house' ? Number(form.bathrooms) : null,
     sellerId:  sellerId.value,
   }
@@ -664,11 +645,10 @@ function logout() {
 
 <style scoped>
 .seller-dashboard-wrapper { display: flex; min-height: 100vh; background: var(--navy); }
-
-/* SIDEBAR */
 .sidebar { width: 260px; background: linear-gradient(180deg, var(--navy-2) 0%, var(--navy-3) 100%); border-right: 1px solid var(--border); padding: 1.5rem 0; position: fixed; height: 100vh; overflow-y: auto; left: 0; top: 0; display: flex; flex-direction: column; }
 .sidebar-header { padding: 0 1.5rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; text-align: center; }
-.avatar-circle { width: 52px; height: 52px; border-radius: 50%; background: var(--gold); color: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; margin: 0 auto 10px; }
+.avatar-circle { width: 52px; height: 52px; border-radius: 50%; background: var(--gold); color: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; margin: 0 auto 10px; overflow: hidden; border: 2px solid rgba(201,168,76,0.65); }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dashboard-title { color: var(--text-main); font-size: 15px; font-weight: 700; margin-bottom: 2px; }
 .dashboard-subtitle { color: var(--text-muted); font-size: 12px; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; padding: 0 1rem; flex: 1; }
@@ -681,37 +661,28 @@ function logout() {
 .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); margin-top: auto; }
 .btn-logout { width: 100%; padding: 10px; background: rgba(255,107,107,0.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.4); border-radius: 7px; font-family: var(--font); font-weight: 600; cursor: pointer; transition: all .2s; }
 .btn-logout:hover { background: rgba(255,107,107,0.25); }
-
-/* MAIN CONTENT */
 .dashboard-content { flex: 1; margin-left: 260px; padding: 2rem; overflow-y: auto; }
 .content-section { max-width: 1100px; margin: 0 auto; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
 .section-header h1 { font-size: 26px; font-weight: 700; }
 .section-header h2 { font-size: 22px; font-weight: 700; }
 .section-header p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
-
-/* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 2rem; }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; display: flex; gap: 14px; align-items: center; }
 .stat-icon { font-size: 28px; }
 .stat-label { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
 .stat-value { font-size: 26px; font-weight: 700; color: var(--gold); }
 .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-
-/* QUICK ACTIONS */
 .quick-actions { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 2rem; }
 .quick-actions h3 { margin-bottom: 1rem; font-size: 15px; color: var(--text-muted); }
 .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .action-btn { padding: 12px; background: rgba(201,168,76,0.08); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 500; transition: all .2s; text-align: center; }
 .action-btn:hover { background: rgba(201,168,76,0.18); border-color: var(--gold); color: var(--gold); }
-
 .insights-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 2rem; }
 .insight-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; display: flex; flex-direction: column; gap: 6px; }
 .insight-card span { color: var(--text-muted); font-size: 12px; text-transform: uppercase; }
 .insight-card strong { color: var(--text-main); font-size: 16px; }
 .insight-card small { color: var(--text-muted); font-size: 12px; }
-
-/* RECENT */
 .recent-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
 .recent-section h3 { font-size: 15px; color: var(--text-muted); margin-bottom: 1rem; }
 .recent-list { display: flex; flex-direction: column; gap: 10px; }
@@ -721,8 +692,6 @@ function logout() {
 .recent-name { font-weight: 500; font-size: 14px; }
 .recent-prop { font-size: 12px; color: var(--text-muted); }
 .recent-time { font-size: 12px; color: var(--text-muted); margin-left: auto; }
-
-/* PROPERTIES */
 .properties-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .property-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: all .2s; }
 .property-card:hover { border-color: var(--gold); transform: translateY(-3px); }
@@ -731,8 +700,8 @@ function logout() {
 .property-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: var(--gold); color: var(--navy); text-transform: uppercase; }
 .property-badge.rent { background: #4dabf7; color: var(--navy); }
 .prop-status-badge { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; text-transform: capitalize; }
-.prop-status-badge.active  { background: rgba(81,207,102,0.2); color: #51cf66; border: 1px solid #51cf66; }
-.prop-status-badge.pending { background: rgba(255,169,77,0.2); color: #ffa94d; border: 1px solid #ffa94d; }
+.prop-status-badge.active  { background: rgba(81,207,102,0.2);  color: #51cf66; border: 1px solid #51cf66; }
+.prop-status-badge.pending { background: rgba(255,169,77,0.2);  color: #ffa94d; border: 1px solid #ffa94d; }
 .prop-status-badge.sold    { background: rgba(167,139,250,0.2); color: #a78bfa; border: 1px solid #a78bfa; }
 .prop-status-badge.rented  { background: rgba(127,224,176,0.2); color: #7fe0b0; border: 1px solid #7fe0b0; }
 .cat-pill { position: absolute; bottom: 10px; left: 10px; background: rgba(10,22,40,0.75); color: var(--text-main); font-size: 11px; padding: 3px 9px; border-radius: 20px; text-transform: capitalize; }
@@ -743,7 +712,7 @@ function logout() {
 .overview-own-listing { display: inline-block; margin-bottom: 8px; background: rgba(111,186,255,0.12); color: #6fbaff; border: 1px solid rgba(111,186,255,0.25); border-radius: 16px; padding: 3px 9px; font-size: 11px; font-weight: 600; }
 .property-details { display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; min-height: 20px; }
 .property-footer { display: flex; justify-content: space-between; align-items: center; }
-.price { font-size: 16px; font-weight: 700; color: var(--gold); }
+.price { font-size: 14px; font-weight: 700; color: var(--gold); }
 .status-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .btn-status { padding: 7px 8px; background: rgba(201,168,76,0.08); border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-family: var(--font); font-size: 12px; transition: all .2s; }
 .btn-status:hover { color: var(--gold); border-color: var(--gold); }
@@ -751,8 +720,6 @@ function logout() {
 .btn-edit:hover { background: var(--gold); color: var(--navy); border-color: var(--gold); }
 .btn-remove { padding: 5px 12px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 5px; cursor: pointer; font-family: var(--font); font-size: 12px; transition: all .2s; }
 .btn-remove:hover { background: #ff6b6b; color: white; border-color: #ff6b6b; }
-
-/* ENQUIRIES */
 .enquiries-list { display: flex; flex-direction: column; gap: 14px; }
 .enquiry-card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 1.5rem; transition: all .2s; }
 .enquiry-card.unread { border-color: var(--gold); background: rgba(201,168,76,0.04); }
@@ -767,8 +734,6 @@ function logout() {
 .btn-reply:hover { opacity: .85; }
 .btn-mark-read { flex: 1; padding: 9px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-family: var(--font); font-weight: 600; transition: all .2s; }
 .btn-mark-read:hover { background: var(--gold); color: var(--navy); border-color: var(--gold); }
-
-/* NOTIFICATIONS */
 .notifications-list { display: flex; flex-direction: column; gap: 10px; }
 .notification-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; display: flex; gap: 14px; align-items: flex-start; transition: all .2s; position: relative; }
 .notification-item:hover { border-color: rgba(201,168,76,0.3); }
@@ -778,8 +743,6 @@ function logout() {
 .notif-content p { color: var(--text-main); font-size: 14px; }
 .notif-time { color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block; }
 .new-dot { background: var(--gold); color: var(--navy); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; position: absolute; top: 12px; right: 12px; }
-
-/* SETTINGS */
 .settings-container { display: flex; flex-direction: column; gap: 1.5rem; }
 .settings-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; }
 .settings-section h3 { color: var(--gold); font-size: 15px; font-weight: 700; margin-bottom: 1.25rem; }
@@ -801,13 +764,9 @@ function logout() {
 .toggle-switch::after { content: ''; position: absolute; width: 22px; height: 22px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: left .2s; }
 .toggle input:checked + .toggle-switch { background: var(--gold); }
 .toggle input:checked + .toggle-switch::after { left: 22px; }
-
-/* EMPTY STATE */
 .empty-state { text-align: center; padding: 4rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); }
 .empty-state h3 { font-size: 18px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
 .empty-state p { font-size: 14px; }
-
-/* MODAL */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(5,12,25,0.85); display: flex; align-items: center; justify-content: center; z-index: 300; }
 .modal { background: var(--navy-2); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; width: 560px; max-height: 90vh; overflow-y: auto; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
@@ -823,14 +782,10 @@ function logout() {
 .form-input { width: 100%; background: var(--navy); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; color: var(--text-main); font-size: 13px; font-family: var(--font); outline: none; resize: vertical; }
 .form-input:focus { border-color: var(--gold); }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 1rem; border-top: 1px solid var(--border); margin-top: .5rem; }
-
-/* BUTTONS */
 .btn-primary { background: var(--gold); color: var(--navy); border: none; padding: 9px 20px; border-radius: 7px; font-size: 14px; font-weight: 600; font-family: var(--font); cursor: pointer; transition: opacity .2s; }
 .btn-primary:hover { opacity: .85; }
 .btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 9px 20px; border-radius: 7px; font-size: 14px; font-family: var(--font); cursor: pointer; transition: all .2s; }
 .btn-outline:hover { color: var(--text-main); border-color: var(--text-muted); }
-
-/* RESPONSIVE */
 @media (max-width: 768px) {
   .sidebar { width: 60px; }
   .sidebar-header, .dashboard-title, .dashboard-subtitle, .nav-label { display: none; }
