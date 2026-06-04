@@ -47,30 +47,44 @@ import { useUsersStore } from '@/stores/users'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const users = useUsersStore()
 
 const email = ref('')
 const password = ref('')
-const role = ref(route.query.role === 'seller' ? 'seller' : route.query.role === 'admin' ? 'admin' : 'viewer')
+const role = ref(
+  route.query.role === 'seller' ? 'seller' :
+  route.query.role === 'admin'  ? 'admin'  : 'viewer'
+)
 const error = ref('')
-const users = useUsersStore()
-const redirectTarget = computed(() => route.query.redirect || route.query.next || '/property/buy')
+
+// Where to go after a successful login
+// Priority: ?redirect= → ?next= → role-based default
+const redirectTarget = computed(() => {
+  if (route.query.redirect) return route.query.redirect
+  if (route.query.next)     return route.query.next
+  if (role.value === 'seller') return '/dashboard'
+  if (role.value === 'admin')  return '/admin'
+  return '/property/buy'
+})
+
 const registerTarget = computed(() => ({
   path: '/register',
   query: {
     ...(role.value === 'seller' ? { role: 'seller' } : {}),
     ...(route.query.redirect ? { redirect: route.query.redirect } : {}),
-    ...(route.query.next ? { next: route.query.next } : {}),
+    ...(route.query.next     ? { next:     route.query.next     } : {}),
   },
 }))
 
 function onSubmit() {
   error.value = ''
+
   if (!email.value || !password.value) {
     error.value = 'Please provide email and password.'
     return
   }
 
-  // If logging in as admin, validate against users registry
+  // ── ADMIN ──────────────────────────────────────────────────
   if (role.value === 'admin') {
     const found = users.findByEmail(email.value)
     if (!found || found.role !== 'admin' || found.password !== password.value) {
@@ -78,40 +92,41 @@ function onSubmit() {
       return
     }
     auth.login(found)
-    router.push('/admin')
+    router.push(redirectTarget.value)
     return
   }
 
-  // For sellers, check users registry first (for pre-existing sellers like demo)
+  // ── SELLER ─────────────────────────────────────────────────
   if (role.value === 'seller') {
     const found = users.findByEmail(email.value)
-    if (found && found.password === password.value && found.role === 'seller') {
-      auth.login(found)
-      router.push('/dashboard')
+    if (!found) {
+      error.value = 'No account found. Please register first.'
       return
-    } else if (found) {
+    }
+    if (found.role !== 'seller') {
+      error.value = 'This account is not a seller account.'
+      return
+    }
+    if (found.password !== password.value) {
       error.value = 'Password incorrect.'
       return
     }
-    // New seller login - create demo account
-    const sellerData = {
-      id: Date.now(),
-      name: email.value.split('@')[0],
-      email: email.value,
-      role: 'seller',
-    }
-    auth.login(sellerData)
-    router.push('/dashboard')
+    auth.login(found)
+    router.push(redirectTarget.value)
     return
   }
 
-  // For viewers: store and continue
-  const userData = {
-    name: email.value.split('@')[0],
-    email: email.value,
-    role: 'viewer',
+  // ── VIEWER ─────────────────────────────────────────────────
+  const found = users.findByEmail(email.value)
+  if (!found) {
+    error.value = 'No account found. Please register first.'
+    return
   }
-  auth.login(userData)
+  if (found.password !== password.value) {
+    error.value = 'Password incorrect.'
+    return
+  }
+  auth.login(found)
   router.push(redirectTarget.value)
 }
 </script>

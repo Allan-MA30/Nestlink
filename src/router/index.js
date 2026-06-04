@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// Views — each teammate fills in their own file
 import Home            from '@/views/Home.vue'
 import Contacts        from '@/views/Contacts.vue'
 import PropertyBuy     from '@/views/PropertyBuy.vue'
@@ -21,7 +20,6 @@ const routes = [
   { path: '/register',       component: AuthRegister },
   { path: '/login',          component: AuthLogin },
 
-  // Protected — only sellers can access
   {
     path: '/dashboard',
     component: SellerDashboard,
@@ -39,21 +37,22 @@ const router = createRouter({
   routes,
 })
 
-
 router.beforeEach((to) => {
   const auth = useAuthStore()
+
+  // Sellers who are logged in stay on their dashboard —
+  // but allow them to visit /login and /register freely
   if (auth.isSeller && !['/dashboard', '/login', '/register'].includes(to.path)) {
     return '/dashboard'
   }
 
+  // Dashboard requires a logged-in seller
+  // termsAccepted is enforced at registration time, not here
   if (to.meta.requiresSeller) {
     if (!auth.isLoggedIn || auth.user.role !== 'seller') return '/login'
-
-    // Sellers must accept Terms & conditions before accessing the dashboard
-    if (!auth.user.termsAccepted) return '/register?role=seller'
   }
 
-
+  // Admin panel requires a logged-in admin
   if (to.meta.requiresAdmin) {
     if (!auth.isLoggedIn || auth.user.role !== 'admin') return '/login'
   }

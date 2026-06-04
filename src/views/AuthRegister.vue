@@ -53,8 +53,10 @@
           <div v-if="role === 'seller'" class="terms-row">
             <div class="terms-title">Terms and conditions</div>
             <div class="terms-items">
+
+              <!-- All three terms are display-only (disabled checked) -->
               <label class="terms-check">
-                <input type="checkbox" v-model="termsAccepted" />
+                <input type="checkbox" disabled checked />
                 <span>
                   1) On the bought product, <strong>5% will be gained</strong> by the website company.
                 </span>
@@ -75,6 +77,7 @@
               </label>
             </div>
 
+            <!-- Only this one checkbox controls termsAccepted -->
             <div class="terms-confirm">
               <label class="terms-check">
                 <input type="checkbox" v-model="termsAccepted" />
@@ -104,34 +107,42 @@ import { useUsersStore } from '@/stores/users'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const users = useUsersStore()
 
 const name = ref('')
 const email = ref('')
 const password = ref('')
 const role = ref('viewer')
-const users = useUsersStore()
 const adminKey = ref('')
 const error = ref('')
-const redirectTarget = computed(() => route.query.redirect || route.query.next || '/property/buy')
+const termsAccepted = ref(false)
+const profilePreview = ref('')
+const profilePicture = ref('')
+
+// Where to go after successful registration
+// Sellers and admins always go to their dashboard regardless of query params
+const redirectTarget = computed(() => {
+  if (role.value === 'seller') return '/dashboard'
+  if (role.value === 'admin')  return '/admin'
+  if (route.query.redirect) return route.query.redirect
+  if (route.query.next)     return route.query.next
+  return '/property/buy'
+})
+
 const loginTarget = computed(() => ({
   path: '/login',
   query: {
     ...(role.value === 'seller' ? { role: 'seller' } : {}),
     ...(route.query.redirect ? { redirect: route.query.redirect } : {}),
-    ...(route.query.next ? { next: route.query.next } : {}),
+    ...(route.query.next     ? { next:     route.query.next     } : {}),
   },
 }))
 
-// Seller terms acceptance (required)
-const termsAccepted = ref(false)
-
-// preselect role from query (e.g. /register?role=seller)
+// Preselect role from query (e.g. /register?role=seller)
 if (route.query.role === 'seller') role.value = 'seller'
-if (route.query.role === 'admin') role.value = 'admin'
-const profilePreview = ref('')
-const profilePicture = ref('')
+if (route.query.role === 'admin')  role.value = 'admin'
 
-// Clear profile picture when switching to viewer
+// Clear profile picture and terms when switching to viewer
 watch(role, (newRole) => {
   if (newRole === 'viewer') {
     profilePreview.value = ''
@@ -140,21 +151,20 @@ watch(role, (newRole) => {
   }
 })
 
-function onSubmit() { 
+function onSubmit() {
   error.value = ''
+
   if (!name.value || !email.value || !password.value) {
     error.value = 'Please complete all fields.'
     return
   }
 
-  // Demo registration — validate uniqueness and store user
   if (users.findByEmail(email.value)) {
     error.value = 'Email already registered.'
     return
   }
 
   if (role.value === 'admin') {
-    // simple demo admin key check
     if (!adminKey.value || adminKey.value !== 'ADMIN2025') {
       error.value = 'Invalid admin key.'
       return
@@ -177,11 +187,16 @@ function onSubmit() {
   }
 
   users.addUser(userData)
-  auth.register({ id: userData.id, name: userData.name, email: userData.email, role: userData.role })
+  auth.register({
+    id: userData.id,
+    name: userData.name,
+    email: userData.email,
+    role: userData.role,
+    ...(userData.role === 'seller' ? { termsAccepted: true } : {}),
+  })
 
-  // Redirect based on role
-  if (role.value === 'seller') router.push('/dashboard')
-  else router.push(redirectTarget.value)
+  // Redirect respects ?redirect= / ?next= then falls back to role default
+  router.push(redirectTarget.value)
 }
 
 function handleFile(e) {
@@ -194,11 +209,6 @@ function handleFile(e) {
   }
   reader.readAsDataURL(f)
 }
-
-function clearProfilePicture() {
-  profilePreview.value = ''
-  profilePicture.value = ''
-}
 </script>
 
 <style scoped>
@@ -209,7 +219,7 @@ function clearProfilePicture() {
 .auth-card h2 { margin-bottom: 0.25rem; }
 .muted { color: var(--text-muted); margin-bottom: 1rem; }
 .form { display: grid; gap: 12px; margin-top: 8px; }
-form-row label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+.form-row label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
 .terms-row { padding: 10px 12px; background: rgba(201,168,76,0.06); border: 1px solid var(--border); border-radius: 10px; }
 .terms-title { font-weight: 800; color: var(--gold); margin-bottom: 8px; }
 .terms-items { display: flex; flex-direction: column; gap: 8px; }

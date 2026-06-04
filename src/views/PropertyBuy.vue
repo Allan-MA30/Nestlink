@@ -58,18 +58,90 @@
         </div>
       </div>
     </div>
+
+    <!-- ── ENQUIRY MODAL ────────────────────────────────────────── -->
+    <Teleport to="body">
+      <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
+        <div class="modal">
+
+          <button class="modal-close" @click="closeModal">✕</button>
+          <h2 class="modal-title">Enquiry Form</h2>
+
+          <!-- Property summary card -->
+          <div class="prop-summary">
+            <img v-if="selectedProp?.image" :src="selectedProp.image" class="summary-img" />
+            <div class="summary-info">
+              <div class="summary-name">{{ selectedProp?.title }}</div>
+              <div class="summary-row">
+                <span class="summary-label">Price</span>
+                <span class="summary-val">${{ selectedProp?.price?.toLocaleString() }}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Category</span>
+                <span class="summary-val">{{ selectedProp?.category }}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Seller</span>
+                <span class="summary-val">{{ getSellerName(selectedProp?.sellerId) }}</span>
+              </div>
+              <div class="summary-row">
+                <span class="summary-label">Seller email</span>
+                <span class="summary-val">{{ getSellerEmail(selectedProp?.sellerId) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Viewer enquiry fields -->
+          <div class="form-grid">
+            <div class="form-row">
+              <label>Your name</label>
+              <input v-model="form.name" type="text" placeholder="Full name" />
+            </div>
+            <div class="form-row">
+              <label>Your email</label>
+              <input v-model="form.email" type="email" placeholder="you@email.com" />
+            </div>
+            <div class="form-row">
+              <label>Phone number</label>
+              <input v-model="form.phone" type="tel" placeholder="+250 7XX XXX XXX" />
+            </div>
+            <div class="form-row">
+              <label>Date needed</label>
+              <input v-model="form.dateNeeded" type="date" />
+            </div>
+            <div class="form-row full">
+              <label>Message</label>
+              <textarea v-model="form.message" rows="3" placeholder="I am interested in this listing. Is it still available?"></textarea>
+            </div>
+          </div>
+
+          <div v-if="formError" class="form-error">{{ formError }}</div>
+          <div v-if="formSuccess" class="form-success">✅ Enquiry sent successfully!</div>
+
+          <div class="modal-actions">
+            <button class="btn-cancel" @click="closeModal">Cancel</button>
+            <button class="btn-send" @click="submitEnquiry">Send Enquiry</button>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useListingsStore } from '@/stores/listings'
 import { useAuthStore } from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 import { useEnquiriesStore } from '@/stores/enquiries'
 
 const route = useRoute()
+const router = useRouter()
 const listings = useListingsStore()
 const auth = useAuthStore()
 const users = useUsersStore()
@@ -81,7 +153,24 @@ const filters = reactive({
   price: route.query.price || '',
 })
 
-const locations = computed(() => [...new Set(listings.properties.filter(p => p.mode === 'sell').map(p => p.location))])
+// ── Modal state ──────────────────────────────────────────────────
+const showModal    = ref(false)
+const selectedProp = ref(null)
+const formError    = ref('')
+const formSuccess  = ref(false)
+
+const form = reactive({
+  name:       auth.user?.name  || '',
+  email:      auth.user?.email || '',
+  phone:      '',
+  message:    '',
+  dateNeeded: '',
+})
+
+// ── Helpers ──────────────────────────────────────────────────────
+const locations = computed(() =>
+  [...new Set(listings.properties.filter(p => p.mode === 'sell').map(p => p.location))]
+)
 
 const forSale = computed(() =>
   listings.properties.filter((p) => {
@@ -98,26 +187,59 @@ const forSale = computed(() =>
 
 function getSellerName(sellerId) {
   const seller = users.findById(sellerId)
-  return seller ? seller.name : 'Seller'
+  return seller ? seller.name : 'Unknown seller'
 }
 
+function getSellerEmail(sellerId) {
+  const seller = users.findById(sellerId)
+  return seller ? seller.email : '—'
+}
+
+// ── Modal open / close ───────────────────────────────────────────
 function handleEnquire(property) {
   if (!auth.isLoggedIn) {
-    alert('Please log in to send an enquiry')
+    alert('Please log in to send an enquiry.')
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
     return
   }
-  const message = prompt(`Message to seller about ${property.title}:`, 'I am interested in this listing. Is it still available?')
-  if (!message) return
+  selectedProp.value = property
+  form.name       = auth.user?.name  || ''
+  form.email      = auth.user?.email || ''
+  form.phone      = ''
+  form.message    = ''
+  form.dateNeeded = ''
+  formError.value   = ''
+  formSuccess.value = false
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+  selectedProp.value = null
+}
+
+// ── Submit ───────────────────────────────────────────────────────
+function submitEnquiry() {
+  formError.value = ''
+  if (!form.name || !form.email || !form.message) {
+    formError.value = 'Please fill in your name, email, and message.'
+    return
+  }
+
   enquiries.sendEnquiry({
-    fromName: auth.user?.name || 'Buyer',
-    fromEmail: auth.user?.email || 'buyer@email.com',
-    propertyId: property.id,
-    sellerId: property.sellerId,
-    propertyTitle: property.title,
-    message,
-    createdAt: new Date().toISOString().split('T')[0],
+    fromName:      form.name,
+    fromEmail:     form.email,
+    fromPhone:     form.phone,
+    dateNeeded:    form.dateNeeded,
+    propertyId:    selectedProp.value.id,
+    sellerId:      selectedProp.value.sellerId,
+    propertyTitle: selectedProp.value.title,
+    message:       form.message,
+    createdAt:     new Date().toISOString().split('T')[0],
   })
-  alert(`Enquiry sent for ${property.title}`)
+
+  formSuccess.value = true
+  setTimeout(() => closeModal(), 1800)
 }
 </script>
 
@@ -152,4 +274,69 @@ function handleEnquire(property) {
 .prop-meta { display: flex; gap: 14px; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
 .btn-enquire { width: 100%; margin-top: 12px; background: rgba(201,168,76,0.1); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); padding: 8px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: background .2s; }
 .btn-enquire:hover { background: rgba(201,168,76,0.2); }
+
+/* ── Modal ───────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 1rem;
+}
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 2rem; width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto; position: relative;
+}
+.modal-close {
+  position: absolute; top: 14px; right: 14px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-muted); width: 32px; height: 32px;
+  border-radius: 50%; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { color: var(--text-main); border-color: var(--gold); }
+.modal-title { font-size: 20px; font-weight: 700; margin-bottom: 1.25rem; }
+
+/* Property summary */
+.prop-summary {
+  display: flex; gap: 14px; background: rgba(201,168,76,0.06);
+  border: 1px solid rgba(201,168,76,0.2); border-radius: 10px; padding: 12px;
+}
+.summary-img { width: 90px; height: 70px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.summary-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.summary-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.summary-row { display: flex; gap: 8px; font-size: 12px; }
+.summary-label { color: var(--text-muted); min-width: 70px; }
+.summary-val { color: var(--text-main); font-weight: 500; }
+
+.divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+
+/* Form fields */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row { display: flex; flex-direction: column; gap: 5px; }
+.form-row.full { grid-column: 1 / -1; }
+.form-row label { font-size: 12px; color: var(--text-muted); }
+.form-row input, .form-row textarea {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 11px; color: var(--text-main);
+  font-family: var(--font); font-size: 13px; outline: none;
+}
+.form-row input:focus, .form-row textarea:focus { border-color: var(--gold); }
+.form-row textarea { resize: vertical; }
+
+.form-error   { color: #ff8b8b; font-size: 13px; margin-top: 10px; }
+.form-success { color: #7fe0b0; font-size: 13px; margin-top: 10px; }
+
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.25rem; }
+.btn-cancel {
+  padding: 9px 20px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-muted); cursor: pointer;
+  font-family: var(--font); font-size: 13px;
+}
+.btn-cancel:hover { border-color: var(--gold); color: var(--text-main); }
+.btn-send {
+  padding: 9px 24px; border-radius: 8px; border: none;
+  background: var(--gold); color: var(--navy); font-weight: 700;
+  cursor: pointer; font-family: var(--font); font-size: 13px;
+}
+.btn-send:hover { opacity: 0.88; }
 </style>
