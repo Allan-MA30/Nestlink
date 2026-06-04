@@ -26,6 +26,14 @@
       </nav>
 
       <div class="sidebar-footer">
+        <div class="dashboard-tools">
+          <button type="button" @click="settings.toggleTheme()">
+            {{ settings.theme === 'dark' ? settings.t('Light', 'Urumuri') : settings.t('Black', 'Umukara') }}
+          </button>
+          <button type="button" @click="settings.toggleLanguage()">
+            {{ settings.language === 'en' ? 'RW' : 'EN' }}
+          </button>
+        </div>
         <button class="btn-logout" @click="logout">🚪 Logout</button>
       </div>
     </aside>
@@ -61,7 +69,7 @@
             <div class="stat-icon">💬</div>
             <div class="stat-info">
               <div class="stat-label">Enquiries</div>
-              <div class="stat-value">{{ enquiriesStore.enquiries.length }}</div>
+              <div class="stat-value">{{ sellerEnquiries.length }}</div>
               <div class="stat-sub">{{ unread }} unread</div>
             </div>
           </div>
@@ -103,10 +111,10 @@
           </div>
         </div>
 
-        <div class="recent-section" v-if="enquiriesStore.enquiries.length > 0">
+        <div class="recent-section" v-if="sellerEnquiries.length > 0">
           <h3>Recent Enquiries</h3>
           <div class="recent-list">
-            <div v-for="e in enquiriesStore.enquiries.slice(0,3)" :key="e.id"
+            <div v-for="e in sellerEnquiries.slice(0,3)" :key="e.id"
               class="recent-item" :class="{ unread: !e.read }">
               <div class="recent-icon">{{ e.read ? '📨' : '🔔' }}</div>
               <div class="recent-info">
@@ -220,7 +228,7 @@
           <button class="btn-outline" @click="markAllRead">Mark all read</button>
         </div>
 
-        <div v-if="enquiriesStore.enquiries.length === 0" class="empty-state">
+        <div v-if="sellerEnquiries.length === 0" class="empty-state">
           <div style="font-size:48px;margin-bottom:1rem;">📭</div>
           <h3>No enquiries yet</h3>
           <p>When buyers enquire about your listings, they will appear here.</p>
@@ -228,7 +236,7 @@
 
         <div v-else class="enquiries-list">
           <div
-            v-for="enquiry in enquiriesStore.enquiries" :key="enquiry.id"
+            v-for="enquiry in sellerEnquiries" :key="enquiry.id"
             class="enquiry-card" :class="{ unread: !enquiry.read }"
           >
             <div class="enquiry-header">
@@ -241,9 +249,20 @@
             <p class="enquiry-email">📧 {{ enquiry.fromEmail }}</p>
             <div class="enquiry-subject"><strong>Re:</strong> {{ enquiry.propertyTitle }}</div>
             <p class="enquiry-message">{{ enquiry.message }}</p>
+            <div v-if="enquiry.reply" class="seller-reply">
+              <strong>Your response:</strong>
+              <p>{{ enquiry.reply }}</p>
+              <small>{{ enquiry.repliedAt }}</small>
+            </div>
+            <textarea
+              v-model="replyForms[enquiry.id]"
+              class="reply-input"
+              rows="3"
+              placeholder="Write your response to this viewer..."
+            ></textarea>
             <div class="enquiry-actions">
-              <button class="btn-reply" @click="enquiriesStore.markRead(enquiry.id)">
-                {{ enquiry.read ? '✅ Replied' : '↩️ Reply' }}
+              <button class="btn-reply" @click="sendReply(enquiry)">
+                {{ enquiry.reply ? 'Update Response' : 'Reply Now' }}
               </button>
               <button v-if="!enquiry.read" class="btn-mark-read"
                 @click="enquiriesStore.markRead(enquiry.id)">Mark as Read</button>
@@ -258,12 +277,12 @@
 
         <div class="notifications-list">
           <div
-            v-for="e in enquiriesStore.enquiries" :key="'notif-' + e.id"
+            v-for="e in sellerEnquiries" :key="'notif-' + e.id"
             class="notification-item" :class="{ new: !e.read }"
           >
             <span class="notif-icon">{{ e.read ? '📨' : '🔔' }}</span>
             <div class="notif-content">
-              <p><strong>New enquiry from {{ e.fromName }}</strong> about "{{ e.propertyTitle }}"</p>
+              <p><strong>{{ e.read ? 'Enquiry from' : 'New enquiry from' }} {{ e.fromName }}</strong> about "{{ e.propertyTitle || e.subject || 'General enquiry' }}"</p>
               <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">"{{ e.message.slice(0, 80) }}..."</p>
               <span class="notif-time">{{ e.createdAt }}</span>
             </div>
@@ -466,16 +485,19 @@ import { useListingsStore }  from '@/stores/listings'
 import { formatRWF }         from '@/stores/listings'
 import { useEnquiriesStore } from '@/stores/enquiries'
 import { useUsersStore }     from '@/stores/users'
+import { useAppSettingsStore } from '@/stores/appSettings'
 
 const router         = useRouter()
 const auth           = useAuthStore()
 const listingsStore  = useListingsStore()
 const enquiriesStore = useEnquiriesStore()
 const usersStore     = useUsersStore()
+const settings       = useAppSettingsStore()
 
 const activeTab = ref('home')
 const showModal = ref(false)
 const editingId = ref(null)
+const replyForms = reactive({})
 
 const settingsForm = ref({
   name:  auth.user?.name  || '',
@@ -489,8 +511,6 @@ const notifPrefs = reactive([
   { label: 'SMS Alerts',           desc: 'Receive SMS for urgent messages',     enabled: true },
   { label: 'Weekly Reports',       desc: 'Receive weekly performance reports',  enabled: true },
 ])
-
-const unread = computed(() => enquiriesStore.enquiries.filter(e => !e.read).length)
 
 const menuItems = computed(() => [
   { id: 'home',          label: 'Home',          icon: '🏠', badge: 0 },
@@ -509,6 +529,10 @@ const initials = computed(() => {
 const sellerId       = computed(() => auth.user?.id || 1)
 const currentSeller  = computed(() => usersStore.findById(sellerId.value))
 const sellerProfilePicture = computed(() => currentSeller.value?.profilePicture || auth.user?.profilePicture || '')
+const sellerEnquiries = computed(() =>
+  enquiriesStore.enquiries.filter(e => !e.sellerId || e.sellerId === sellerId.value)
+)
+const unread = computed(() => sellerEnquiries.value.filter(e => !e.read).length)
 const forSale        = computed(() => listingsStore.properties.filter(p => p.mode === 'sell'))
 const sellerListings = computed(() =>
   listingsStore.properties.filter(p => p.sellerId === sellerId.value || (p.category === 'car' && p.sellerId === 1))
@@ -630,7 +654,17 @@ function submitForm() {
 }
 
 function markAllRead() {
-  enquiriesStore.enquiries.forEach(e => e.read = true)
+  sellerEnquiries.value.forEach(e => e.read = true)
+}
+
+function sendReply(enquiry) {
+  const reply = (replyForms[enquiry.id] || enquiry.reply || '').trim()
+  if (!reply) {
+    alert('Please write a response before sending.')
+    return
+  }
+  enquiriesStore.replyToEnquiry(enquiry.id, reply)
+  replyForms[enquiry.id] = ''
 }
 
 function saveSettings() {
@@ -659,6 +693,9 @@ function logout() {
 .nav-label { flex: 1; text-align: left; }
 .badge { background: #ff6b6b; color: white; border-radius: 50%; min-width: 20px; height: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); margin-top: auto; }
+.dashboard-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.dashboard-tools button { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 7px; padding: 8px; font-family: var(--font); font-size: 12px; cursor: pointer; }
+.dashboard-tools button:hover { color: var(--gold); border-color: var(--gold); }
 .btn-logout { width: 100%; padding: 10px; background: rgba(255,107,107,0.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.4); border-radius: 7px; font-family: var(--font); font-weight: 600; cursor: pointer; transition: all .2s; }
 .btn-logout:hover { background: rgba(255,107,107,0.25); }
 .dashboard-content { flex: 1; margin-left: 260px; padding: 2rem; overflow-y: auto; }
@@ -729,6 +766,11 @@ function logout() {
 .enquiry-email { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
 .enquiry-subject { background: rgba(201,168,76,0.08); padding: 8px 12px; border-radius: 6px; font-size: 13px; margin: 10px 0; }
 .enquiry-message { color: var(--text-muted); font-size: 13px; line-height: 1.6; padding: 10px 14px; background: rgba(10,22,40,0.4); border-left: 3px solid var(--gold); border-radius: 4px; margin: 10px 0; }
+.seller-reply { color: var(--text-main); font-size: 13px; line-height: 1.6; padding: 10px 14px; background: rgba(127,224,176,0.08); border-left: 3px solid #7fe0b0; border-radius: 4px; margin: 10px 0; }
+.seller-reply p { color: var(--text-muted); margin: 4px 0; }
+.seller-reply small { color: var(--text-muted); font-size: 11px; }
+.reply-input { width: 100%; background: var(--navy); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; color: var(--text-main); font-family: var(--font); font-size: 13px; outline: none; resize: vertical; }
+.reply-input:focus { border-color: var(--gold); }
 .enquiry-actions { display: flex; gap: 10px; margin-top: 12px; }
 .btn-reply { flex: 1; padding: 9px; background: var(--gold); color: var(--navy); border: none; border-radius: 6px; cursor: pointer; font-family: var(--font); font-weight: 600; transition: opacity .2s; }
 .btn-reply:hover { opacity: .85; }

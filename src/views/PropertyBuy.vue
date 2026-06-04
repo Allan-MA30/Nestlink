@@ -229,6 +229,7 @@ function submitEnquiry() {
     fromName:      form.name,
     fromEmail:     form.email,
     fromPhone:     form.phone,
+    viewerId:      auth.user?.id,
     dateNeeded:    form.dateNeeded,
     propertyId:    selectedProp.value.id,
     sellerId:      selectedProp.value.sellerId,

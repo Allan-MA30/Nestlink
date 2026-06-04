@@ -28,9 +28,12 @@
       </RouterLink>
 
       <div class="nav-links">
-        <RouterLink to="/"              class="nav-link" active-class="active">Home</RouterLink>
-        <RouterLink to="/property/sell" class="nav-link" active-class="active">Property</RouterLink>
-        <RouterLink to="/contacts"      class="nav-link" active-class="active">Contacts</RouterLink>
+        <RouterLink to="/"              class="nav-link" active-class="active">{{ settings.t('Home', 'Ahabanza') }}</RouterLink>
+        <RouterLink to="/property/sell" class="nav-link" active-class="active">{{ settings.t('Property', 'Imitungo') }}</RouterLink>
+        <RouterLink to="/contacts"      class="nav-link" active-class="active">{{ settings.t('Contacts', 'Twandikire') }}</RouterLink>
+        <RouterLink v-if="auth.isViewer" to="/my-own" class="nav-link" active-class="active">My Own</RouterLink>
+        <RouterLink v-if="auth.isAdmin" to="/admin" class="nav-link" active-class="active">Admin</RouterLink>
+        <RouterLink v-if="auth.isAdmin" to="/dashboard" class="nav-link" active-class="active">Seller Dashboard</RouterLink>
         <!-- Dashboard only shows for sellers -->
         <RouterLink v-if="auth.isSeller" to="/dashboard" class="nav-link" active-class="active">
           Dashboard
@@ -38,25 +41,31 @@
       </div>
 
       <div class="nav-right">
+        <button class="tool-btn" type="button" @click="settings.toggleTheme()">
+          {{ settings.theme === 'dark' ? settings.t('Light', 'Urumuri') : settings.t('Black', 'Umukara') }}
+        </button>
+        <button class="tool-btn" type="button" @click="settings.toggleLanguage()">
+          {{ settings.language === 'en' ? 'RW' : 'EN' }}
+        </button>
         <template v-if="auth.isLoggedIn">
-          <span class="badge-role" :class="auth.isSeller ? 'seller' : 'viewer'">
-            {{ auth.isSeller ? 'Seller' : 'Viewer' }}
+          <span class="badge-role" :class="auth.isSeller ? 'seller' : auth.isAdmin ? 'admin' : 'viewer'">
+            {{ auth.isSeller ? 'Seller' : auth.isAdmin ? 'Admin' : 'Viewer' }}
           </span>
           <div class="avatar">{{ initials }}</div>
-          <button class="btn-logout" @click="logout">Logout</button>
+          <button class="btn-logout" @click="logout">{{ settings.t('Logout', 'Sohoka') }}</button>
         </template>
         <template v-else>
-          <RouterLink to="/login"    class="btn-outline" style="padding:7px 16px;font-size:13px;">Login</RouterLink>
-          <RouterLink to="/register" class="btn-primary" style="padding:7px 16px;font-size:13px;">Register</RouterLink>
+          <RouterLink to="/login"    class="btn-outline" style="padding:7px 16px;font-size:13px;">{{ settings.t('Login', 'Injira') }}</RouterLink>
+          <RouterLink to="/register" class="btn-primary" style="padding:7px 16px;font-size:13px;">{{ settings.t('Register', 'Iyandikishe') }}</RouterLink>
         </template>
       </div>
     </nav>
 
     <!-- Property Sub-Nav (shows on any /property/* route) -->
     <div v-if="isPropertyRoute" class="sub-nav">
-      <RouterLink to="/property/buy"  class="sub-btn buy"  active-class="active">Buy</RouterLink>
-      <RouterLink to="/property/sell" class="sub-btn sell" active-class="active">Sell</RouterLink>
-      <RouterLink to="/property/rent" class="sub-btn rent" active-class="active">Rent</RouterLink>
+      <RouterLink to="/property/buy"  class="sub-btn buy"  active-class="active">{{ settings.t('Buy', 'Gura') }}</RouterLink>
+      <RouterLink to="/property/sell" class="sub-btn sell" active-class="active">{{ settings.t('Sell', 'Gurisha') }}</RouterLink>
+      <RouterLink to="/property/rent" class="sub-btn rent" active-class="active">{{ settings.t('Rent', 'Kodesha') }}</RouterLink>
     </div>
   </div>
 </template>
@@ -65,10 +74,12 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAppSettingsStore } from '@/stores/appSettings'
 
 const auth   = useAuthStore()
 const route  = useRoute()
 const router = useRouter()
+const settings = useAppSettingsStore()
 
 const isPropertyRoute = computed(() => route.path.startsWith('/property'))
 
@@ -129,6 +140,17 @@ function logout() {
 .nav-link:hover, .nav-link.active { color: var(--text-main); background: var(--card); }
 .nav-link.active { color: var(--gold); }
 .nav-right { display: flex; align-items: center; gap: 10px; }
+.tool-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.tool-btn:hover { color: var(--gold); border-color: var(--gold); }
 .btn-logout {
   background: transparent;
   color: var(--text-muted);
@@ -163,6 +185,11 @@ function logout() {
   background: rgba(111,186,255,0.12);
   color: #6fbaff;
   border: 1px solid rgba(111,186,255,0.25);
+}
+.badge-role.admin {
+  background: rgba(167,139,250,0.14);
+  color: #a78bfa;
+  border: 1px solid rgba(167,139,250,0.3);
 }
 
 /* Sub-nav */

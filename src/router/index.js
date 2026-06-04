@@ -30,6 +30,11 @@ const routes = [
     component: AdminDashboard,
     meta: { requiresAdmin: true }
   },
+  {
+    path: '/my-own',
+    component: () => import('@/views/MyOwn.vue'),
+    meta: { requiresViewer: true }
+  },
 ]
 
 const router = createRouter({
@@ -39,6 +44,8 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
+
+  if (auth.isAdmin) return true
 
   // Sellers who are logged in stay on their dashboard —
   // but allow them to visit /login and /register freely
@@ -55,6 +62,10 @@ router.beforeEach((to) => {
   // Admin panel requires a logged-in admin
   if (to.meta.requiresAdmin) {
     if (!auth.isLoggedIn || auth.user.role !== 'admin') return '/login'
+  }
+
+  if (to.meta.requiresViewer) {
+    if (!auth.isLoggedIn || auth.user.role !== 'viewer') return '/login'
   }
 })
 

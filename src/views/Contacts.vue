@@ -150,8 +150,10 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useEnquiriesStore } from '@/stores/enquiries'
+import { useAuthStore } from '@/stores/auth'
 
 const enquiries = useEnquiriesStore()
+const auth = useAuthStore()
 
 const form = reactive({
   name: '',
@@ -234,6 +236,7 @@ const submitForm = async () => {
     enquiries.sendEnquiry({
       fromName: form.name,
       fromEmail: form.email,
+      viewerId: auth.user?.role === 'viewer' ? auth.user.id : null,
       subject: form.subject,
       message: form.message,
       phone: form.phone || null,
