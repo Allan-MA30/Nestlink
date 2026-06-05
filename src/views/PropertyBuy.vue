@@ -18,10 +18,10 @@
       </select>
       <select v-model="filters.price" class="filter-select">
         <option value="">Any Price</option>
-        <option value="0-1000">Under RWF 1,000</option>
-        <option value="1000-50000">RWF 1,000 – 50,000</option>
-        <option value="50000-100000">RWF 50,000 – 100,000</option>
-        <option value="100000-999999999">RWF 100,000+</option>
+        <option value="0-1000000">Under RWF 1,000,000</option>
+        <option value="1000000-5000000">RWF 1,000,000 – 5,000,000</option>
+        <option value="5000000-10000000">RWF 5,000,000 – 1０,０００，０００</option>
+        <option value="1０００００００-999999999">RWF 1０，０００，０００+</option>
       </select>
     </div>
 

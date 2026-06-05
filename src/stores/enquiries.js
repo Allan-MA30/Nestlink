@@ -4,6 +4,7 @@
  *
  * Stores messages sent by buyers/renters to sellers.
  */
+import { useNotificationStore } from './notifications'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
@@ -18,6 +19,7 @@ export const useEnquiriesStore = defineStore('enquiries', () => {
       message: 'Is the price negotiable? We would like to schedule a viewing this weekend.',
       read: false,
       viewerId: null,
+      sellerId: 1,
       reply: '',
       repliedAt: '',
       responseRead: true,
@@ -32,12 +34,15 @@ export const useEnquiriesStore = defineStore('enquiries', () => {
       message: 'Does it include a garage? Also what is the land size?',
       read: false,
       viewerId: null,
+      sellerId: 1,
       reply: '',
       repliedAt: '',
       responseRead: true,
       createdAt: '2025-06-01',
     },
   ])
+
+  const notifications = useNotificationStore()
 
   function sendEnquiry(enquiry) {
     enquiries.value.push({
@@ -48,6 +53,11 @@ export const useEnquiriesStore = defineStore('enquiries', () => {
       repliedAt: '',
       responseRead: true,
     })
+
+    notifications.addNotification(
+      `New enquiry received for ${enquiry.propertyTitle}`,
+      'success'
+    )
   }
 
   function markRead(id) {
@@ -58,10 +68,16 @@ export const useEnquiriesStore = defineStore('enquiries', () => {
   function replyToEnquiry(id, reply) {
     const e = enquiries.value.find(e => e.id === id)
     if (!e) return
+
     e.reply = reply
     e.repliedAt = new Date().toISOString().split('T')[0]
     e.responseRead = false
     e.read = true
+
+    notifications.addNotification(
+      `Reply sent to ${e.fromName}`,
+      'info'
+    )
   }
 
   function markResponseRead(id) {
